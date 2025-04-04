@@ -1,0 +1,8 @@
+# .gitignore
+
+# Python bytecode files
+__pycache__/
+*.pyc
+
+# Generated images and question data
+images/
