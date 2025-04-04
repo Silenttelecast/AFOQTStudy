@@ -1,98 +1,68 @@
 # image_generator.py
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle, Polygon
-import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+import random
+import os
 
-def save_instrument_image(data, filename):
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
-    ax1.set_xlim(-1, 1)
-    ax1.set_ylim(-1, 1)
-    ax1.set_aspect('equal')
-    ax1.set_title("Artificial Horizon")
-    
-    climb_angle = data["climb"]
-    bank_angle = data["bank"]
-    horizon_y = -climb_angle
-    horizon_x1 = -np.cos(np.radians(bank_angle))
-    horizon_y1 = horizon_y - np.sin(np.radians(bank_angle))
-    horizon_x2 = np.cos(np.radians(bank_angle))
-    horizon_y2 = horizon_y + np.sin(np.radians(bank_angle))
-    ax1.plot([horizon_x1, horizon_x2], [horizon_y1, horizon_y2], 'k-', lw=2)
-    
-    pointer_angle = bank_angle + 90
-    pointer_x = 0.8 * np.cos(np.radians(pointer_angle))
-    pointer_y = 0.8 * np.sin(np.radians(pointer_angle))
-    ax1.plot([0, pointer_x], [0, pointer_y], 'k-', lw=2)
-    ax1.plot([0, 0.1, -0.1, 0], [0, 0.05, 0.05, 0], 'b-', lw=2)
-    
-    ax2.set_xlim(-1, 1)
-    ax2.set_ylim(-1, 1)
-    ax2.set_aspect('equal')
-    ax2.set_title("Compass")
-    heading = data["heading"]
-    ax2.arrow(0, 0, 0.8 * np.cos(np.radians(heading)), 0.8 * np.sin(np.radians(heading)), 
-              head_width=0.1, head_length=0.1, fc='k', ec='k')
-    
-    plt.savefig(filename, dpi=100)
-    plt.close(fig)
+def draw_block_count(filename):
+    # Minimal implementation: Create a simple image with a number
+    img = Image.new("RGB", (200, 200), "white")
+    draw = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype("arial.ttf", 20)
+    except:
+        font = ImageFont.load_default()
+    number = random.randint(1, 10)  # Placeholder number of blocks
+    draw.text((50, 50), f"Blocks: {number}", fill="black", font=font)
+    img.save(filename)
+    return number
 
-def save_block_counting_image(data, filename):
-    fig = plt.figure(figsize=(6, 6))
-    ax = fig.add_subplot(111, projection='3d')
-    blocks = data["blocks"]
-    numbered_block = data["numbered"]
-    for (x, y, z) in blocks:
-        ax.bar3d(x, y, z, 1, 1, 1, shade=True, color='gray', alpha=0.6)
-    ax.text(numbered_block[0] + 0.5, numbered_block[1] + 0.5, numbered_block[2] + 1.5, 
-            "1", color='red', fontsize=12)
-    ax.set_xlim(0, 3)
-    ax.set_ylim(0, 3)
-    ax.set_zlim(0, 3)
-    plt.savefig(filename, dpi=100)
-    plt.close(fig)
+def draw_rotated_blocks(filename):
+    # Minimal implementation: Draw a simple rotated square
+    img = Image.new("RGB", (200, 200), "white")
+    draw = ImageDraw.Draw(img)
+    square = Image.new("RGB", (50, 50), "black")
+    angle = random.randint(0, 360)
+    rotated_square = square.rotate(angle, expand=True)
+    img.paste(rotated_square, (75, 75))
+    img.save(filename)
+    return angle
 
-def save_table_reading_image(data, filename):
-    fig, ax = plt.subplots(figsize=(8, 6))
-    table = data["table"]
-    x_vals = data["x_vals"]
-    y_vals = data["y_vals"]
-    ax.table(cellText=table, rowLabels=y_vals, colLabels=x_vals, loc='center')
-    ax.axis('off')
-    plt.savefig(filename, dpi=100)
-    plt.close(fig)
+def draw_table_reading(filename):
+    # Minimal implementation: Draw a simple 2x2 table
+    img = Image.new("RGB", (200, 200), "white")
+    draw = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype("arial.ttf", 20)
+    except:
+        font = ImageFont.load_default()
+    table = [[random.randint(1, 100) for _ in range(2)] for _ in range(2)]
+    for i in range(2):
+        for j in range(2):
+            draw.text((50 + j * 50, 50 + i * 30), str(table[i][j]), fill="black", font=font)
+    draw.rectangle([(40, 40), (140, 100)], outline="black")
+    draw.line([(90, 40), (90, 100)], fill="black")
+    draw.line([(40, 70), (140, 70)], fill="black")
+    img.save(filename)
+    return table
 
-def save_rotated_blocks_image(data, filename):
-    fig, axs = plt.subplots(1, 5, figsize=(15, 3))
-    original = data["original"]
-    options = data["options"]
-    axs[0].plot(*zip(*original), 'bo-')
-    axs[0].set_title("Original")
-    axs[0].set_xlim(-1, 3)
-    axs[0].set_ylim(-1, 3)
-    for i, rotated in enumerate(options, 1):
-        axs[i].plot(*zip(*rotated), 'bo-')
-        axs[i].set_title(f"Option {chr(64+i)}")
-        axs[i].set_xlim(-3, 3)
-        axs[i].set_ylim(-3, 3)
-    plt.savefig(filename, dpi=100)
-    plt.close(fig)
-
-def save_hidden_figures_image(data, filename):
-    fig, axs = plt.subplots(2, 3, figsize=(12, 8))
-    figures = data["figures"]
-    complex_coords = data["complex"]
-    for i, (label, coords) in enumerate(figures.items()):
-        row, col = divmod(i, 3)
-        if row == 0:
-            axs[row, col].plot(*zip(*coords), 'k-')
-            axs[row, col].set_title(label)
-            axs[row, col].set_xlim(-1, 2)
-            axs[row, col].set_ylim(-1, 2)
-    axs[1, 0].plot(*zip(*complex_coords), 'ko-', alpha=0.5)
-    axs[1, 0].set_title("Find the Hidden Figure")
-    axs[1, 0].set_xlim(-1, 2)
-    axs[1, 0].set_ylim(-1, 2)
-    axs[1, 1].axis('off')
-    axs[1, 2].axis('off')
-    plt.savefig(filename, dpi=100)
-    plt.close(fig)
+def draw_hidden_figures(filename):
+    # Minimal implementation: Draw a simple shape in a cluttered background
+    img = Image.new("RGB", (200, 200), "white")
+    draw = ImageDraw.Draw(img)
+    # Background clutter
+    for _ in range(10):
+        x1, y1 = random.randint(0, 200), random.randint(0, 200)
+        x2, y2 = random.randint(0, 200), random.randint(0, 200)
+        draw.line([(x1, y1), (x2, y2)], fill="gray")
+    # Hidden shape (e.g., a triangle)
+    shape = random.randint(0, 3)  # 0: triangle, 1: square, 2: circle, 3: line
+    if shape == 0:
+        draw.polygon([(100, 50), (80, 90), (120, 90)], fill="black")
+    elif shape == 1:
+        draw.rectangle([(80, 60), (120, 100)], fill="black")
+    elif shape == 2:
+        draw.ellipse([(80, 60), (120, 100)], fill="black")
+    else:
+        draw.line([(80, 60), (120, 100)], fill="black", width=2)
+    img.save(filename)
+    return shape

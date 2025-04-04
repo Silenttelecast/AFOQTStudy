@@ -18,19 +18,11 @@ class AFOQTGUI:
         self.question_label = tk.Label(self.root, text="", wraplength=700, justify="left")
         self.question_label.pack(pady=10)
 
-        # Frame for attitude indicator and compass (for Instrument Comprehension)
-        self.instrument_frame = tk.Frame(self.root)
-        self.instrument_frame.pack(pady=5)
-        self.attitude_label = tk.Label(self.instrument_frame)
-        self.attitude_label.pack(side=tk.LEFT, padx=10)
-        self.compass_label = tk.Label(self.instrument_frame)
-        self.compass_label.pack(side=tk.LEFT, padx=10)
-
-        # Frame for option images (for subtests with images)
-        self.options_frame = tk.Frame(self.root)
-        self.options_frame.pack(pady=5)
-        self.option_labels = [tk.Label(self.options_frame) for _ in range(4)]
-        for i, label in enumerate(self.option_labels):
+        # Frame for images (e.g., attitude indicator, compass, or other subtest images)
+        self.image_frame = tk.Frame(self.root)
+        self.image_frame.pack(pady=5)
+        self.image_labels = [tk.Label(self.image_frame) for _ in range(5)]  # Up to 5 images (e.g., attitude, compass, 4 options)
+        for i, label in enumerate(self.image_labels):
             label.pack(side=tk.LEFT, padx=5)
 
         self.options_var = tk.StringVar()
@@ -76,65 +68,72 @@ class AFOQTGUI:
             self.options_var.set("")
             self.question_counter_label.config(text=f"Question {self.current_question_index + 1} of {len(self.questions)}")
 
-            # Display images for Instrument Comprehension
-            if self.subtests[self.current_subtest_index]["name"] == "Instrument Comprehension" and self.data is not None:
+            # Clear previous images
+            for label in self.image_labels:
+                label.config(image="")
+
+            # Display images based on subtest
+            subtest_name = self.subtests[self.current_subtest_index]["name"]
+            if self.data is not None and isinstance(self.data, list) and self.current_question_index < len(self.data):
+                idx = self.data[self.current_question_index]
                 try:
-                    if isinstance(self.data, list) and self.current_question_index < len(self.data):
-                        idx = self.data[self.current_question_index]
+                    if subtest_name == "Instrument Comprehension":
                         # Attitude Indicator
                         attitude_file = f"images/instrument/attitude_{idx}.png"
                         if os.path.exists(attitude_file):
                             attitude_img = tk.PhotoImage(file=attitude_file)
-                            self.attitude_label.config(image=attitude_img)
-                            self.attitude_label.image = attitude_img
-                        else:
-                            print(f"Attitude file not found: {attitude_file}")
-                            self.attitude_label.config(image="")
+                            self.image_labels[0].config(image=attitude_img)
+                            self.image_labels[0].image = attitude_img
                         # Compass
                         compass_file = f"images/instrument/compass_{idx}.png"
                         if os.path.exists(compass_file):
                             compass_img = tk.PhotoImage(file=compass_file)
-                            self.compass_label.config(image=compass_img)
-                            self.compass_label.image = compass_img
-                        else:
-                            print(f"Compass file not found: {compass_file}")
-                            self.compass_label.config(image="")
+                            self.image_labels[1].config(image=compass_img)
+                            self.image_labels[1].image = compass_img
                         # Options
                         for i, opt in enumerate(["a", "b", "c", "d"]):
                             opt_file = f"images/instrument/option_{opt}_{idx}.png"
                             if os.path.exists(opt_file):
                                 opt_img = tk.PhotoImage(file=opt_file)
-                                self.option_labels[i].config(image=opt_img)
-                                self.option_labels[i].image = opt_img
-                            else:
-                                print(f"Option file not found: {opt_file}")
-                                self.option_labels[i].config(image="")
-                    else:
-                        print(f"Data mismatch: {self.data}")
-                        self.attitude_label.config(image="")
-                        self.compass_label.config(image="")
-                        for label in self.option_labels:
-                            label.config(image="")
+                                self.image_labels[i + 2].config(image=opt_img)
+                                self.image_labels[i + 2].image = opt_img
+                    elif subtest_name == "Block Counting":
+                        block_file = f"images/block_counting/block_count_{idx}.png"
+                        if os.path.exists(block_file):
+                            block_img = tk.PhotoImage(file=block_file)
+                            self.image_labels[0].config(image=block_img)
+                            self.image_labels[0].image = block_img
+                    elif subtest_name == "Rotated Blocks":
+                        block_file = f"images/rotated_blocks/rotated_blocks_{idx}.png"
+                        if os.path.exists(block_file):
+                            block_img = tk.PhotoImage(file=block_file)
+                            self.image_labels[0].config(image=block_img)
+                            self.image_labels[0].image = block_img
+                    elif subtest_name == "Table Reading":
+                        table_file = f"images/table_reading/table_reading_{idx}.png"
+                        if os.path.exists(table_file):
+                            table_img = tk.PhotoImage(file=table_file)
+                            self.image_labels[0].config(image=table_img)
+                            self.image_labels[0].image = table_img
+                    elif subtest_name == "Hidden Figures":
+                        figure_file = f"images/hidden_figures/hidden_figures_{idx}.png"
+                        if os.path.exists(figure_file):
+                            figure_img = tk.PhotoImage(file=figure_file)
+                            self.image_labels[0].config(image=figure_img)
+                            self.image_labels[0].image = figure_img
                 except Exception as e:
-                    print(f"Image error: {e}")
-                    self.attitude_label.config(image="")
-                    self.compass_label.config(image="")
-                    for label in self.option_labels:
+                    print(f"Image error in {subtest_name}: {e}")
+                    for label in self.image_labels:
                         label.config(image="")
-            else:
-                # For subtests without images, clear the image labels
-                self.attitude_label.config(image="")
-                self.compass_label.config(image="")
-                for label in self.option_labels:
-                    label.config(image="")
         else:
             self.next_subtest()
 
     def submit_answer(self):
         user_answer = self.options_var.get()
-        correct_answer = self.answers[self.current_question_index]
-        if user_answer == correct_answer:
-            self.correct_answers += 1
+        if user_answer and self.current_question_index < len(self.answers):
+            correct_answer = self.answers[self.current_question_index]
+            if user_answer == correct_answer:
+                self.correct_answers += 1
         self.current_question_index += 1
         self.show_question()
 
