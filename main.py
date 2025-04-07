@@ -5,6 +5,7 @@ from config import SUBTESTS
 
 def main():
     root = tk.Tk()
+    root.title("AFOQT Study Simulation")
     app = AFOQTGUI(root, SUBTESTS)
     root.mainloop()
 

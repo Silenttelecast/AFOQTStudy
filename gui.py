@@ -1,158 +1,199 @@
 # gui.py
 import tkinter as tk
-from tkinter import ttk
-import os
+from tkinter import messagebox
+import random
+import time
 
 class AFOQTGUI:
     def __init__(self, root, subtests):
         self.root = root
         self.subtests = subtests
-        self.current_subtest_index = -1
-        self.current_question_index = 0
-        self.correct_answers = 0
-        self.root.title("AFOQT Simulation")
-        self.root.geometry("800x600")
-        self.setup_ui()
+        self.current_subtest = 0
+        self.questions, self.answers, self.data = [], [], []
+        self.current_question = 0
+        self.time_remaining = 0
+        self.timer_running = False
+        self.user_answers = []  # To store user's answers for scoring
 
-    def setup_ui(self):
-        self.question_label = tk.Label(self.root, text="", wraplength=700, justify="left")
-        self.question_label.pack(pady=10)
+        # Set window size and title
+        self.root.title("AFOQT Study Simulation")
+        self.root.geometry("600x400")  # Set a reasonable window size
 
-        # Frame for images (e.g., attitude indicator, compass, or other subtest images)
-        self.image_frame = tk.Frame(self.root)
-        self.image_frame.pack(pady=5)
-        self.image_labels = [tk.Label(self.image_frame) for _ in range(5)]  # Up to 5 images (e.g., attitude, compass, 4 options)
-        for i, label in enumerate(self.image_labels):
-            label.pack(side=tk.LEFT, padx=5)
+        # Create main frame
+        self.main_frame = tk.Frame(self.root)
+        self.main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        self.options_var = tk.StringVar()
-        self.options_menu = ttk.Combobox(self.root, textvariable=self.options_var, state="readonly")
-        self.options_menu.pack(pady=10)
+        # Initialize GUI elements
+        self.subtest_label = tk.Label(self.main_frame, text="", font=("Arial", 14, "bold"))
+        self.subtest_label.pack(anchor="nw")
 
-        self.submit_button = tk.Button(self.root, text="Submit", command=self.submit_answer)
-        self.submit_button.pack(pady=5)
+        self.timer_label = tk.Label(self.main_frame, text="Time Remaining: 00:00", font=("Arial", 12))
+        self.timer_label.pack(anchor="ne")
 
-        self.timer_label = tk.Label(self.root, text="Time Remaining: 00:00")
-        self.timer_label.pack(pady=5)
+        self.question_label = tk.Label(self.main_frame, text="", font=("Arial", 12), wraplength=550, justify="left")
+        self.question_label.pack(anchor="w", pady=10)
 
-        self.question_counter_label = tk.Label(self.root, text="Question 0 of 0")
-        self.question_counter_label.pack(pady=5)
+        # Frame for options
+        self.options_frame = tk.Frame(self.main_frame)
+        self.options_frame.pack(fill="x", pady=5)
 
-        self.result_label = tk.Label(self.root, text="")
-        self.result_label.pack(pady=10)
+        # Variable to store the user's selected option
+        self.selected_option = tk.StringVar()
+        self.option_buttons = []
 
-        self.next_subtest()
+        # Submit button
+        self.submit_button = tk.Button(self.main_frame, text="Submit", command=self.submit_answer, state="disabled")
+        self.submit_button.pack(pady=10)
 
-    def next_subtest(self):
-        self.current_subtest_index += 1
-        if self.current_subtest_index < len(self.subtests):
-            subtest = self.subtests[self.current_subtest_index]
-            print(f"Starting subtest: {subtest['name']}")
-            self.current_question_index = 0
-            self.questions, self.answers, self.data = subtest["gen_func"]()
-            print(f"Data length: {len(self.data) if self.data is not None else 'None'}")
-            self.correct_answers = 0
-            self.time_remaining = int(subtest["time_minutes"] * 60)
-            print(f"Timer reset to {self.time_remaining} seconds")
-            self.timer_running = True
-            self.update_timer()
-            self.show_question()
-        else:
-            self.show_results()
+        # Load the first subtest
+        self.load_subtest()
 
-    def show_question(self):
-        if self.current_question_index < len(self.questions):
-            self.question_label.config(text=self.questions[self.current_question_index])
-            opts = self.questions[self.current_question_index].split("Options: ")[-1].split(", ")
-            self.options_menu["values"] = opts
-            self.options_var.set("")
-            self.question_counter_label.config(text=f"Question {self.current_question_index + 1} of {len(self.questions)}")
+    def load_subtest(self):
+        # Clear previous subtest content
+        for widget in self.options_frame.winfo_children():
+            widget.destroy()
+        self.option_buttons.clear()
+        self.selected_option.set("")
 
-            # Clear previous images
-            for label in self.image_labels:
-                label.config(image="")
+        # Load the new subtest
+        subtest = self.subtests[self.current_subtest]
+        gen_func = subtest["gen_func"]
+        num_questions = subtest["num_questions"]
+        self.time_remaining = int(subtest["time_minutes"] * 60)  # Convert minutes to seconds
 
-            # Display images based on subtest
-            subtest_name = self.subtests[self.current_subtest_index]["name"]
-            if self.data is not None and isinstance(self.data, list) and self.current_question_index < len(self.data):
-                idx = self.data[self.current_question_index]
-                try:
-                    if subtest_name == "Instrument Comprehension":
-                        # Attitude Indicator
-                        attitude_file = f"images/instrument/attitude_{idx}.png"
-                        if os.path.exists(attitude_file):
-                            attitude_img = tk.PhotoImage(file=attitude_file)
-                            self.image_labels[0].config(image=attitude_img)
-                            self.image_labels[0].image = attitude_img
-                        # Compass
-                        compass_file = f"images/instrument/compass_{idx}.png"
-                        if os.path.exists(compass_file):
-                            compass_img = tk.PhotoImage(file=compass_file)
-                            self.image_labels[1].config(image=compass_img)
-                            self.image_labels[1].image = compass_img
-                        # Options
-                        for i, opt in enumerate(["a", "b", "c", "d"]):
-                            opt_file = f"images/instrument/option_{opt}_{idx}.png"
-                            if os.path.exists(opt_file):
-                                opt_img = tk.PhotoImage(file=opt_file)
-                                self.image_labels[i + 2].config(image=opt_img)
-                                self.image_labels[i + 2].image = opt_img
-                    elif subtest_name == "Block Counting":
-                        block_file = f"images/block_counting/block_count_{idx}.png"
-                        if os.path.exists(block_file):
-                            block_img = tk.PhotoImage(file=block_file)
-                            self.image_labels[0].config(image=block_img)
-                            self.image_labels[0].image = block_img
-                    elif subtest_name == "Rotated Blocks":
-                        block_file = f"images/rotated_blocks/rotated_blocks_{idx}.png"
-                        if os.path.exists(block_file):
-                            block_img = tk.PhotoImage(file=block_file)
-                            self.image_labels[0].config(image=block_img)
-                            self.image_labels[0].image = block_img
-                    elif subtest_name == "Table Reading":
-                        table_file = f"images/table_reading/table_reading_{idx}.png"
-                        if os.path.exists(table_file):
-                            table_img = tk.PhotoImage(file=table_file)
-                            self.image_labels[0].config(image=table_img)
-                            self.image_labels[0].image = table_img
-                    elif subtest_name == "Hidden Figures":
-                        figure_file = f"images/hidden_figures/hidden_figures_{idx}.png"
-                        if os.path.exists(figure_file):
-                            figure_img = tk.PhotoImage(file=figure_file)
-                            self.image_labels[0].config(image=figure_img)
-                            self.image_labels[0].image = figure_img
-                except Exception as e:
-                    print(f"Image error in {subtest_name}: {e}")
-                    for label in self.image_labels:
-                        label.config(image="")
-        else:
-            self.next_subtest()
+        # Generate questions and select the required number
+        all_questions, all_answers, all_data = gen_func()
+        indices = random.sample(range(len(all_questions)), min(num_questions, len(all_questions)))
+        self.questions = [all_questions[i] for i in indices]
+        self.answers = [all_answers[i] for i in indices]
+        self.data = [all_data[i] for i in indices]
 
-    def submit_answer(self):
-        user_answer = self.options_var.get()
-        if user_answer and self.current_question_index < len(self.answers):
-            correct_answer = self.answers[self.current_question_index]
-            if user_answer == correct_answer:
-                self.correct_answers += 1
-        self.current_question_index += 1
-        self.show_question()
+        # Update subtest label
+        self.subtest_label.config(text=f"Subtest {self.current_subtest + 1}: {subtest['name']}")
+
+        # Start the timer
+        self.timer_running = True
+        self.update_timer()
+
+        # Display the first question
+        self.current_question = 0
+        self.display_question()
 
     def update_timer(self):
         if self.timer_running and self.time_remaining > 0:
-            mins, secs = divmod(self.time_remaining, 60)
-            self.timer_label.config(text=f"Time Remaining: {mins:02d}:{secs:02d}")
+            minutes = self.time_remaining // 60
+            seconds = self.time_remaining % 60
+            self.timer_label.config(text=f"Time Remaining: {minutes:02d}:{seconds:02d}")
             self.time_remaining -= 1
-            self.root.after(1000, self.update_timer)
+            self.root.after(1000, self.update_timer)  # Update every second
         elif self.time_remaining <= 0:
+            self.timer_running = False
+            self.timer_label.config(text="Time Remaining: 00:00")
+            messagebox.showinfo("Time's Up", "Time is up for this subtest!")
+            self.next_subtest()
+
+    def display_question(self):
+        # Clear previous options
+        for widget in self.options_frame.winfo_children():
+            widget.destroy()
+        self.option_buttons.clear()
+        self.selected_option.set("")
+        self.submit_button.config(state="disabled")
+
+        # Update question label
+        question_text = f"Question {self.current_question + 1} of {len(self.questions)}\n{self.questions[self.current_question]}"
+        self.question_label.config(text=question_text)
+
+        # Parse the options from the question text
+        question_lines = self.questions[self.current_question].split("\n")
+        option_lines = [line for line in question_lines if line.startswith(("A:", "B:", "C:", "D:"))]
+        options = [line.split(":", 1)[1].strip() for line in option_lines]
+
+        # Create radio buttons for options
+        for i, option in enumerate(option_lines):
+            label = option.split(":", 1)[0].strip()  # e.g., "A"
+            rb = tk.Radiobutton(
+                self.options_frame,
+                text=option,
+                variable=self.selected_option,
+                value=label,
+                font=("Arial", 10),
+                anchor="w",
+                command=self.enable_submit
+            )
+            rb.pack(fill="x", pady=2)
+            self.option_buttons.append(rb)
+
+        # For debugging: print to console
+        print(f"Displaying question {self.current_question + 1} of subtest {self.current_subtest + 1}")
+        print(self.questions[self.current_question])
+        print(f"Correct answer: {self.answers[self.current_question]}")
+
+    def enable_submit(self):
+        # Enable the submit button once an option is selected
+        self.submit_button.config(state="normal")
+
+    def submit_answer(self):
+        # Record the user's answer
+        selected_label = self.selected_option.get()
+        correct_label = self.answers[self.current_question]
+        is_correct = selected_label == correct_label
+        self.user_answers.append({
+            "subtest": self.subtests[self.current_subtest]["name"],
+            "question": self.current_question + 1,
+            "selected": selected_label,
+            "correct": correct_label,
+            "is_correct": is_correct
+        })
+
+        # Provide feedback (optional)
+        if is_correct:
+            messagebox.showinfo("Feedback", "Correct!")
+        else:
+            messagebox.showinfo("Feedback", f"Incorrect. The correct answer was {correct_label}.")
+
+        # Move to the next question
+        self.next_question()
+
+    def next_question(self):
+        self.current_question += 1
+        if self.current_question < len(self.questions):
+            self.display_question()
+        else:
             self.timer_running = False
             self.next_subtest()
 
-    def show_results(self):
-        self.question_label.config(text="Simulation Complete!")
-        self.options_menu.pack_forget()
-        self.submit_button.pack_forget()
-        self.timer_label.pack_forget()
-        self.question_counter_label.pack_forget()
-        score = self.correct_answers
-        self.result_label.config(text=f"Total Correct Answers for Last Subtest: {score}")
-        self.timer_running = False
+    def next_subtest(self):
+        self.current_subtest += 1
+        if self.current_subtest < len(self.subtests):
+            self.load_subtest()
+        else:
+            # End of test
+            self.display_results()
+            self.root.quit()
+
+    def display_results(self):
+        # Calculate scores
+        total_correct = sum(1 for answer in self.user_answers if answer["is_correct"])
+        total_questions = len(self.user_answers)
+
+        # Group by subtest
+        subtest_scores = {}
+        for answer in self.user_answers:
+            subtest = answer["subtest"]
+            if subtest not in subtest_scores:
+                subtest_scores[subtest] = {"correct": 0, "total": 0}
+            subtest_scores[subtest]["total"] += 1
+            if answer["is_correct"]:
+                subtest_scores[subtest]["correct"] += 1
+
+        # Display results
+        result_text = "Test Completed!\n\nOverall Score:\n"
+        result_text += f"{total_correct}/{total_questions} ({total_correct/total_questions*100:.1f}%)\n\n"
+        result_text += "Subtest Scores:\n"
+        for subtest, scores in subtest_scores.items():
+            correct = scores["correct"]
+            total = scores["total"]
+            result_text += f"{subtest}: {correct}/{total} ({correct/total*100:.1f}%)\n"
+
+        messagebox.showinfo("Test Results", result_text)

@@ -3,15 +3,32 @@ import random
 
 def generate_block_counting_questions():
     questions, answers, data = [], [], []
-    problems = [
-        ("A stack of blocks is shown. How many blocks are in the stack?", ["A: 3", "B: 4", "C: 5", "D: 6"], "C"),
-        ("A 3D block structure is shown. How many blocks are visible?", ["A: 2", "B: 3", "C: 4", "D: 5"], "B"),
-        ("A block tower is shown. How many blocks are in the tower?", ["A: 5", "B: 6", "C: 7", "D: 8"], "A"),
-        ("A block arrangement is shown. How many blocks are there?", ["A: 4", "B: 5", "C: 6", "D: 7"], "C"),
-        ("A 3D block pile is shown. How many blocks are in the pile?", ["A: 3", "B: 4", "C: 5", "D: 6"], "D")
-    ]
-    for question, options, answer in random.sample(problems, len(problems)):
+    problems = []
+    for i in range(50):
+        num_blocks = random.randint(5, 15)
+        question = f"A 3D block structure is shown with {num_blocks} blocks. How many blocks are in the structure?"
+        correct_answer = str(num_blocks)
+        incorrect_options = set()
+        while len(incorrect_options) < 3:
+            val = random.randint(5, 15)
+            if val != num_blocks:
+                incorrect_options.add(str(val))
+        options = [correct_answer] + list(incorrect_options)
+        random.shuffle(options)
+        option_labels = ["A", "B", "C", "D"]
+        labeled_options = [f"{label}: {value}" for label, value in zip(option_labels, options)]
+        correct_index = options.index(correct_answer)
+        correct_label = option_labels[correct_index]
+        formatted_question = f"{question}\nOptions:\n" + "\n".join(labeled_options)
+        problems.append((formatted_question, correct_label, {
+            "question": question,
+            "options": options,
+            "answer": correct_answer
+        }))
+
+    for question, correct_label, problem_data in problems:
         questions.append(question)
-        answers.append(options)
-        data.append({"question": question, "options": options, "answer": answer})
+        answers.append(correct_label)
+        data.append(problem_data)
+
     return questions, answers, data
