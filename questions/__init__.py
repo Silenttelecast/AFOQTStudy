@@ -1,13 +1,13 @@
 # questions/__init__.py
-from .verbal_analogies import *
-from .arithmetic_reasoning import *
-from .word_knowledge import *
-from .math_knowledge import *
-from .reading_comprehension import *
-from .instrument import *
-from .block_counting import *
-from .table_reading import *
-from .aviation_information import *
-from .general_science import *
-from .rotated_blocks import *
-from .hidden_figures import *
+from .verbal_analogies import generate_verbal_analogies_questions as verbal_analogies
+from .arithmetic_reasoning import generate_arithmetic_reasoning_questions as arithmetic_reasoning
+from .word_knowledge import generate_word_knowledge_questions as word_knowledge
+from .math_knowledge import generate_math_knowledge_questions as math_knowledge
+from .reading_comprehension import generate_reading_comprehension_questions as reading_comprehension
+from .instrument import generate_instrument_comprehension_questions as instrument
+from .block_counting import generate_block_counting_questions as block_counting
+from .table_reading import generate_table_reading_questions as table_reading
+from .aviation_information import generate_aviation_information_questions as aviation_information
+from .general_science import generate_general_science_questions as general_science
+from .rotated_blocks import generate_rotated_blocks_questions as rotated_blocks
+from .hidden_figures import generate_hidden_figures_questions as hidden_figures
